@@ -1,5 +1,6 @@
 package com.shoprearranger;
 
+import com.google.inject.Provides;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.MouseEvent;
@@ -83,6 +84,9 @@ public class ShopRearrangerPlugin extends Plugin
 
 	@Inject
 	private MouseManager mouseManager;
+
+	@Inject
+	private ShopRearrangerConfig config;
 
 	private volatile boolean unlocked;
 	private String shopKey;
@@ -217,6 +221,12 @@ public class ShopRearrangerPlugin extends Plugin
 		grabOffset = null;
 		dragPoint = null;
 		dragging = false;
+	}
+
+	@Provides
+	ShopRearrangerConfig provideConfig(ConfigManager configManager)
+	{
+		return configManager.getConfig(ShopRearrangerConfig.class);
 	}
 
 	@Override
@@ -648,7 +658,10 @@ public class ShopRearrangerPlugin extends Plugin
 		return slot == null || slot >= widgetsBySlot.length ? null : widgetsBySlot[slot];
 	}
 
-	/** Moves the item to the slot, swapping with whatever is there. */
+	/**
+	 * Moves the item to the slot. An empty slot just takes it; on an occupied one the setting decides whether the
+	 * two items swap or the dragged item is inserted and the rest shift along.
+	 */
 	private void drop(int itemId, int slot)
 	{
 		Integer from = currentSlots.get(itemId);
@@ -656,9 +669,20 @@ public class ShopRearrangerPlugin extends Plugin
 		{
 			return;
 		}
+		Widget occupant = widgetsBySlot[slot];
+		if (occupant != null && config.dropMode() == ShopRearrangerConfig.DropMode.INSERT)
+		{
+			int[] bySlot = new int[widgetsBySlot.length];
+			for (int i = 0; i < bySlot.length; i++)
+			{
+				bySlot[i] = widgetsBySlot[i] == null ? -1 : widgetsBySlot[i].getItemId();
+			}
+			saveLayout(ShopLayout.insert(bySlot, from, slot));
+			return;
+		}
+
 		Map<Integer, Integer> next = new LinkedHashMap<>(currentSlots);
 		next.put(itemId, slot);
-		Widget occupant = widgetsBySlot[slot];
 		if (occupant != null)
 		{
 			next.put(occupant.getItemId(), from);

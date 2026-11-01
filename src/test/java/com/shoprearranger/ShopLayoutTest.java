@@ -60,6 +60,33 @@ public class ShopLayoutTest
 	}
 
 	@Test
+	public void insertForwardShiftsItemsBack()
+	{
+		// 10 dragged from slot 0 onto slot 3: 20, -, 40 shift back one, the gap moves with them
+		Map<Integer, Integer> layout = ShopLayout.insert(new int[]{10, 20, -1, 40, 50}, 0, 3);
+		assertEquals(Integer.valueOf(3), layout.get(10));
+		assertEquals(Integer.valueOf(0), layout.get(20));
+		assertEquals(Integer.valueOf(2), layout.get(40));
+		assertEquals(Integer.valueOf(4), layout.get(50));
+	}
+
+	@Test
+	public void insertBackwardShiftsItemsForward()
+	{
+		// The pineapple (115, slot 15) inserted at the top right (slot 7): slots 7-14 move up one
+		int[] bySlot = new int[16];
+		for (int i = 0; i < 16; i++)
+		{
+			bySlot[i] = 100 + i;
+		}
+		Map<Integer, Integer> layout = ShopLayout.insert(bySlot, 15, 7);
+		assertEquals(Integer.valueOf(7), layout.get(115));
+		assertEquals(Integer.valueOf(8), layout.get(107));
+		assertEquals(Integer.valueOf(15), layout.get(114));
+		assertEquals(Integer.valueOf(6), layout.get(106));
+	}
+
+	@Test
 	public void encodeDecodeRoundTrip()
 	{
 		Map<Integer, Integer> layout = new LinkedHashMap<>();

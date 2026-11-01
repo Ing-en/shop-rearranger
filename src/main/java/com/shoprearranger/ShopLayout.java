@@ -57,6 +57,38 @@ final class ShopLayout
 		return slots;
 	}
 
+	/**
+	 * Moves the item in slot {@code from} to slot {@code to}, shifting everything in between one slot back toward
+	 * {@code from}, the way the bank's Insert mode does. Empty slots in between shift along too.
+	 *
+	 * @param bySlot item id in each slot, -1 for empty
+	 * @return item id to slot after the move
+	 */
+	static Map<Integer, Integer> insert(int[] bySlot, int from, int to)
+	{
+		int[] next = bySlot.clone();
+		int moving = next[from];
+		if (from < to)
+		{
+			System.arraycopy(next, from + 1, next, from, to - from);
+		}
+		else if (from > to)
+		{
+			System.arraycopy(next, to, next, to + 1, from - to);
+		}
+		next[to] = moving;
+
+		Map<Integer, Integer> layout = new LinkedHashMap<>();
+		for (int slot = 0; slot < next.length; slot++)
+		{
+			if (next[slot] > 0)
+			{
+				layout.putIfAbsent(next[slot], slot);
+			}
+		}
+		return layout;
+	}
+
 	/** {@code "itemId:slot,itemId:slot"} */
 	static String encode(Map<Integer, Integer> layout)
 	{
