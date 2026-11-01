@@ -1,0 +1,42 @@
+plugins {
+    id 'java'
+}
+
+repositories {
+    mavenLocal()
+    maven {
+        url = 'https://repo.runelite.net'
+    }
+    mavenCentral()
+}
+
+def runeLiteVersion = 'latest.release'
+
+dependencies {
+    compileOnly group: 'net.runelite', name: 'client', version: runeLiteVersion
+
+    compileOnly 'org.projectlombok:lombok:1.18.30'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
+
+    testImplementation 'junit:junit:4.12'
+    testImplementation group: 'net.runelite', name: 'client', version: runeLiteVersion
+    testImplementation group: 'net.runelite', name: 'jshell', version: runeLiteVersion
+}
+
+group = 'com.shoprearranger'
+version = '1.0.0'
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+    options.release.set(11)
+}
+
+tasks.register('run', JavaExec) {
+    group = 'application'
+    description = 'Launches RuneLite with Shop Rearranger loaded'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.shoprearranger.ShopRearrangerPluginTest'
+    // ExternalPluginManager.loadBuiltin refuses to run without assertions enabled.
+    jvmArgs = ['-ea']
+    args = ['--debug', '--developer-mode']
+}
