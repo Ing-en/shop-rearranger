@@ -1,0 +1,72 @@
+# Builds the plugin against the latest RuneLite release every day, the way the Plugin Hub does
+# after each RuneLite update. If it stops building, it opens an issue (GitHub emails the repo
+# owner about it); once it builds again, it closes that issue.
+name: RuneLite compatibility
+
+on:
+  schedule:
+    - cron: '23 6 * * *'
+  workflow_dispatch:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+
+      - name: Build against the latest RuneLite release
+        run: |
+          chmod +x gradlew
+          ./gradlew build --refresh-dependencies --no-daemon --console=plain
+
+      - name: Open an issue if it no longer builds
+        if: failure() && github.event_name != 'push'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const label = 'runelite-compat';
+            const { owner, repo } = context.repo;
+            const open = await github.rest.issues.listForRepo({ owner, repo, state: 'open', labels: label });
+            if (open.data.length > 0) {
+              return;
+            }
+            await github.rest.issues.create({
+              owner,
+              repo,
+              labels: [label],
+              title: 'Plugin no longer builds against the latest RuneLite release',
+              body: [
+                `The daily compatibility build failed: ${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`,
+                '',
+                'RuneLite probably renamed or removed something the plugin uses. The Plugin Hub marks the plugin',
+                'incompatible until a fixed commit is merged there.',
+              ].join('\n'),
+            });
+
+      - name: Close the issue once it builds again
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const open = await github.rest.issues.listForRepo({ owner, repo, state: 'open', labels: 'runelite-compat' });
+            for (const issue of open.data) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: issue.number,
+                body: `Builds again: ${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`,
+              });
+              await github.rest.issues.update({ owner, repo, issue_number: issue.number, state: 'closed' });
+            }
